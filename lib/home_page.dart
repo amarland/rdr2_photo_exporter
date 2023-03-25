@@ -1,5 +1,7 @@
+import 'dart:async';
+
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:rdr2_photo_exporter/photo.dart';
+import 'package:flutter/foundation.dart';
 
 import 'command_bar_combo_box.dart';
 import 'filesytem_utils.dart' as fs_utils;
@@ -16,20 +18,25 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _photos = <Photo>[];
-  final _gridItems = ValueNotifier<List<PhotoGridItem>?>(null);
+  late final StreamController<List<PhotoGridItem>?> _gridItemsController;
 
   @override
   void initState() {
     super.initState();
-    _loadPhotos();
+    _gridItemsController = StreamController(
+      onListen: () async {
+        await Future.delayed(const Duration(milliseconds: 500)); // WTF?
+        _gridItemsController.add(await compute(_loadPhotosSync, widget.paths));
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<PhotoGridItem>?>(
-      valueListenable: _gridItems,
-      builder: (context, photoGridItems, _) {
+    return StreamBuilder<List<PhotoGridItem>?>(
+      stream: _gridItemsController.stream,
+      builder: (context, snapshot) {
+        final photoGridItems = snapshot.data;
         final selectedItems = photoGridItems?.where((item) => item.enabled) ??
             const Iterable.empty();
         final selectedItemCount = selectedItems.length;
@@ -72,7 +79,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   icon: const Icon(FluentIcons.delete),
                   label: const Text('Delete'),
                   onPressed: selectedItemCount > 0
-                      ? () async => await _deletePhotos(selectedItems)
+                      ? () async => await _deletePhotos(
+                            context: context,
+                            selectedItems: selectedItems,
+                          )
                       : null,
                 ),
               ],
@@ -86,6 +96,12 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _gridItemsController.close();
+    super.dispose();
   }
 
   GridView _buildGridView(List<PhotoGridItem> items) {
@@ -104,7 +120,7 @@ class _MyHomePageState extends State<MyHomePage> {
             setState(() {
               final item = items[index];
               items[index] = item.copyWith(enabled: !item.enabled);
-              _gridItems.value = items;
+              _gridItemsController.add(items);
             });
           },
         );
@@ -113,43 +129,50 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  @override
-  void didUpdateWidget(MyHomePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _loadPhotos();
-  }
-
-  Future<void> _loadPhotos() async {
-    _photos
-      ..clear()
-      ..addAll(
-        await Future.wait(
-          widget.paths.map((path) async => await fs_utils.parsePhotoFile(path)),
-        ),
-      ) /* ..sort((p1, p2) => p1.dateTaken.compareTo(p2.dateTaken)) */;
-    _gridItems.value = _photos
+  static List<PhotoGridItem> _loadPhotosSync(Iterable<String> paths) {
+    return paths
+        .map(fs_utils.parsePhotoFileSync)
         .map((photo) => PhotoGridItem(photo: photo))
-        .toList(growable: false);
+        .toList(growable: false)
+      ..sort(
+        (item2, item1) {
+          // descending
+          final date1 = item1.photo.dateTaken;
+          final date2 = item2.photo.dateTaken;
+          if (date1 != null && date2 != null) {
+            return date1.compareTo(date2);
+          } else if (date1 == null && date2 == null) {
+            return 0;
+          } else {
+            return date1 == null ? -1 : 1;
+          }
+        },
+      );
   }
 
   void _onFilterChanged(dynamic game) {
-    _gridItems.value =
-        (game is Game ? _photos.where((photo) => photo.game == game) : _photos)
-            .map((photo) => PhotoGridItem(photo: photo))
-            .toList(growable: false);
+    /*_gridItemsController.add(
+      (game is Game ? _photos.where((photo) => photo.game == game) : _photos)
+          .map((photo) => PhotoGridItem(photo: photo))
+          .toList(growable: false),
+    );*/
   }
 
-  Future<void> _savePhotos(Iterable<PhotoGridItem> selectedItems) async {
+  static Future<void> _savePhotos(Iterable<PhotoGridItem> selectedItems) async {
     await fs_utils.savePhotos(
       selectedItems.map((item) => item.photo),
     ); // TODO: handle result
   }
 
-  Future<void> _deletePhotos(Iterable<PhotoGridItem> selectedItems) async {
+  static Future<void> _deletePhotos({
+    required BuildContext context,
+    required Iterable<PhotoGridItem> selectedItems,
+  }) async {
     final singular = selectedItems.length == 1;
     final nounWithArticle = singular ? 'this photo' : 'these photos';
     final pronoun = singular ? 'it' : 'them';
     final proceed = await _showContentDialog(
+      context: context,
       title: 'Delete $nounWithArticle?',
       message: "If you delete $pronoun, you won't be able to recover $pronoun."
           ' Do you want to delete $nounWithArticle?',
@@ -163,7 +186,8 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<bool> _showContentDialog({
+  static Future<bool> _showContentDialog({
+    required BuildContext context,
     required String title,
     required String message,
     required String positiveButtonText,

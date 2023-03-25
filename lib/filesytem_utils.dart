@@ -36,15 +36,15 @@ Stream<String> getPhotoPaths() async* {
   }
 }
 
-Future<Photo> parsePhotoFile(String path) async {
+Photo parsePhotoFileSync(String path) {
   RandomAccessFile? randomAccessFile;
   Uint8List? imageBytes;
   String? title;
   String? timestampAsString;
   Game game;
   try {
-    randomAccessFile = await (await File(path).open()).setPosition(0x03);
-    switch (await randomAccessFile.readByte()) {
+    randomAccessFile = File(path).openSync()..setPositionSync(0x03);
+    switch (randomAccessFile.readByteSync()) {
       case 0x1:
         game = Game.gta5;
         break;
@@ -54,13 +54,13 @@ Future<Photo> parsePhotoFile(String path) async {
       default:
         throw const FormatException();
     }
-    final headerBytes = await randomAccessFile.read(9);
+    final headerBytes = randomAccessFile.readSync(9);
     if (utf8.decode(headerBytes) != 'P\u0000H\u0000O\u0000T\u0000O') {
       throw const FormatException();
     }
     final isGameGta5 = game == Game.gta5;
-    await randomAccessFile.setPosition(isGameGta5 ? 0x124 : 0x12C);
-    final startOfImageBytes = await randomAccessFile.read(2);
+    randomAccessFile.setPositionSync(isGameGta5 ? 0x124 : 0x12C);
+    final startOfImageBytes = randomAccessFile.readSync(2);
     if (startOfImageBytes[0] != 0xFF && startOfImageBytes[1] != 0xD8) {
       throw const FormatException();
     }
@@ -78,7 +78,7 @@ Future<Photo> parsePhotoFile(String path) async {
 
     do {
       const segmentMaxSize = 4096;
-      final segment = await randomAccessFile.read(segmentMaxSize);
+      final segment = randomAccessFile.readSync(segmentMaxSize);
       fileCanBeReadFurther = segment.length == segmentMaxSize;
       for (var index = 0; index < segment.length; index++) {
         var byte = segment[index];
@@ -88,7 +88,7 @@ Future<Photo> parsePhotoFile(String path) async {
             bytesBuilder.add(Uint8List.sublistView(segment, 0, index + 1));
             imageBytes = bytesBuilder.takeBytes();
             bytesBuilder = BytesBuilder(copy: true);
-            await randomAccessFile.setPosition(
+            randomAccessFile.setPositionSync(
               isGameGta5 ? 0x80124 : 0x10012C,
             ); // JSON
             break;
@@ -134,7 +134,7 @@ Future<Photo> parsePhotoFile(String path) async {
       }
     } while (fileCanBeReadFurther);
   } finally {
-    await randomAccessFile?.close();
+    randomAccessFile?.closeSync();
   }
   DateTime? dateTaken;
   if (timestampAsString != null) {

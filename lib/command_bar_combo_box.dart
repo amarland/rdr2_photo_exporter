@@ -39,6 +39,7 @@ class CommandBarComboBox<T> extends CommandBarItem {
           value: items[selectedIndex].value,
           onChanged: onChanged,
         ),
+        const SizedBox(width: 8.0),
       ],
     );
   }

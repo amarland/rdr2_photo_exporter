@@ -1,5 +1,4 @@
 name: rdr2_photo_exporter
-description: TODO
 
 publish_to: 'none'
 
@@ -16,10 +15,10 @@ dependencies:
     git:
       url: https://github.com/amarland/filepicker_windows.git
       ref: initial_directory_support
-  fluent_ui: ^4.2.0
+  fluent_ui: ^4.4.1
   intl: ^0.17.0
   path: ^1.8.2
-  path_provider_windows: ^2.1.3
+  path_provider_windows: ^2.1.5
   win32: ^3.1.3
 
 dev_dependencies:
