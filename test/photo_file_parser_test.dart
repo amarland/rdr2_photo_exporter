@@ -1,8 +1,8 @@
 @TestOn('vm')
 //
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rdr2_photo_exporter/filesytem_utils.dart';
-import 'package:rdr2_photo_exporter/game.dart';
+import 'package:rdr2_photo_exporter/filesystem/filesystem.dart';
+import 'package:rdr2_photo_exporter/models/game.dart';
 
 void main() {
   group('valid photo files are parsed successfully', () {

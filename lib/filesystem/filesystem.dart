@@ -10,8 +10,8 @@ import 'package:path_provider_windows/path_provider_windows.dart'
     show PathProviderWindows;
 import 'package:win32/win32.dart';
 
-import 'game.dart';
-import 'photo.dart';
+import '../models/game.dart';
+import '../models/photo.dart';
 
 Stream<String> getPhotoPaths() async* {
   final rootPath = path.join(

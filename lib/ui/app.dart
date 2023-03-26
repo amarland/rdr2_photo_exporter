@@ -1,18 +1,16 @@
 import 'package:fluent_ui/fluent_ui.dart';
 
-import 'home_page.dart';
+import 'photo_grid.dart';
 
 class App extends StatelessWidget {
-  const App({super.key, required this.paths});
-
-  final List<String> paths;
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
     return FluentApp(
-      home: MyHomePage(paths: paths),
+      home: const PhotoGrid(),
       debugShowCheckedModeBanner: false,
-      darkTheme: ThemeData(brightness: Brightness.dark),
+      darkTheme: FluentThemeData(brightness: Brightness.dark),
       themeMode: ThemeMode.dark,
     );
   }

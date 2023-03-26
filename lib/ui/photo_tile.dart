@@ -1,7 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:intl/intl.dart';
 
-import 'photo.dart';
+import '../models/photo_grid_item.dart';
 
 class PhotoTile extends StatelessWidget {
   const PhotoTile({
@@ -46,7 +46,7 @@ class PhotoTile extends StatelessWidget {
     };
     return GestureDetector(
       onTap: onTap,
-      child: item.enabled ? borderedContent() : content,
+      child: item.selected ? borderedContent() : content,
     );
   }
 
@@ -109,7 +109,7 @@ class PhotoTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Checkbox(checked: item.enabled, onChanged: (_) => onTap()),
+              Checkbox(checked: item.selected, onChanged: (_) => onTap()),
             ],
           ),
         ),
@@ -126,14 +126,4 @@ class PhotoTile extends StatelessWidget {
       maxLines: 1,
     );
   }
-}
-
-class PhotoGridItem {
-  const PhotoGridItem({required this.photo, this.enabled = false});
-
-  final Photo photo;
-  final bool enabled;
-
-  PhotoGridItem copyWith({required bool enabled}) =>
-      PhotoGridItem(photo: photo, enabled: enabled);
 }
