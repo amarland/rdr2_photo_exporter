@@ -14,7 +14,8 @@ class PhotoGridState {
   final List<PhotoGridItem> items;
   final bool deletionConfirmationDialogShown;
 
-  bool get commandBarButtonsEnabled => items.isNotEmpty;
+  bool get filteringEnabled => items.isNotEmpty;
+  bool get actionButtonsEnabled => items.any((item) => item.selected);
 
   PhotoGridState copyWith({
     List<PhotoGridItem>? items,

@@ -49,19 +49,19 @@ class PhotoGrid extends StatelessWidget {
                         ),
                       );
                     },
-                    enabled: state.commandBarButtonsEnabled,
+                    enabled: state.filteringEnabled,
                   ),
                   CommandBarButton(
-                    icon: const Icon(FluentIcons.save_as),
-                    label: const Text('Save as'),
-                    onPressed: state.commandBarButtonsEnabled
+                    icon: const Icon(FluentIcons.save),
+                    label: const Text('Extract'),
+                    onPressed: state.actionButtonsEnabled
                         ? () => bloc.add(const SaveButtonClicked())
                         : null,
                   ),
                   CommandBarButton(
                     icon: const Icon(FluentIcons.delete),
                     label: const Text('Delete'),
-                    onPressed: state.commandBarButtonsEnabled
+                    onPressed: state.actionButtonsEnabled
                         ? () => bloc.add(const DeleteButtonClicked())
                         : null,
                   ),
@@ -78,13 +78,11 @@ class PhotoGrid extends StatelessWidget {
         listener: (context, state) {
           if (state.deletionConfirmationDialogShown) {
             _showDeletionConfirmationDialog(context);
-          } else {
-            Navigator.pop(context);
           }
         },
         listenWhen: (oldState, newState) =>
-            newState.deletionConfirmationDialogShown !=
-            oldState.deletionConfirmationDialogShown,
+            newState.deletionConfirmationDialogShown &&
+            !oldState.deletionConfirmationDialogShown,
       ),
     );
   }
@@ -116,7 +114,7 @@ class PhotoGrid extends StatelessWidget {
     String? negativeButtonText,
     required void Function(bool) onDialogDismissed,
   }) async {
-    await showDialog<void>(
+    final result = await showDialog<bool>(
       context: context,
       builder: (context) {
         return ContentDialog(
@@ -125,17 +123,18 @@ class PhotoGrid extends StatelessWidget {
           actions: [
             Button(
               child: Text(positiveButtonText),
-              onPressed: () => onDialogDismissed(true),
+              onPressed: () => Navigator.pop(context, true),
             ),
             if (negativeButtonText != null)
               Button(
                 child: Text(negativeButtonText),
-                onPressed: () => onDialogDismissed(false),
+                onPressed: () => Navigator.pop(context, false),
               ),
           ],
         );
       },
     );
+    onDialogDismissed(result ?? false);
   }
 
   // TODO: merge with `_showContentDialog`?
@@ -144,7 +143,7 @@ class PhotoGrid extends StatelessWidget {
   ) async {
     return await _showContentDialog(
       context: context,
-      title: 'Delete the selected photos?',
+      title: 'Delete selected photos?',
       message: "If you delete them, you won't be able to recover them."
           ' Are you sure you want to delete them?',
       positiveButtonText: 'Delete',
