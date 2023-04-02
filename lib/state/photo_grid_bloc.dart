@@ -8,20 +8,33 @@ import '../models/photo_grid_item.dart';
 import '../state/photo_grid_event.dart';
 import '../state/photo_grid_state.dart';
 
-typedef _StateEmitter = Emitter<PhotoGridState>;
-
+// TODO: replace with Cubit?
 class PhotoGridBloc extends Bloc<PhotoGridEvent, PhotoGridState> {
   PhotoGridBloc() : super(PhotoGridState.initial) {
-    on<Ready>((_, emit) async => await _loadPhotos(emit));
+    on<Ready>((_, emit) async {
+      emit(await _onReady());
+    });
     on<FilterSelectionChanged>(
-      (event, emit) => _onFilterChanged(event.selection, emit),
+      (event, emit) {
+        final newState = _onFilterSelectionChanged(event.selection);
+        if (newState != null) {
+          emit(newState);
+        }
+      },
     );
-    on<PhotoClicked>(
-        (event, emit) => _onPhotoSelectionStateChanged(event.index, emit));
-    on<SaveButtonClicked>((_, __) async => await _saveSelectedPhotos());
-    on<DeleteButtonClicked>((_, emit) => _showDeletionConfirmationDialog(emit));
+    on<PhotoClicked>((event, emit) {
+      emit(_onPhotoSelectionStateChanged(event.index));
+    });
+    on<SaveButtonClicked>((_, __) async {
+      await _onSaveButtonClicked();
+    });
+    on<DeleteButtonClicked>((_, emit) {
+      emit(_onDeleteButtonClicked());
+    });
     on<DeletionConfirmationDialogDismissed>(
-      (event, emit) => _onConfirmationDialogDismissed(event.result, emit),
+      (event, emit) async {
+        emit(await _onDeletionConfirmationDialogDismissed(event.result));
+      },
     );
   }
 
@@ -31,12 +44,12 @@ class PhotoGridBloc extends Bloc<PhotoGridEvent, PhotoGridState> {
   Iterable<Photo> get _selectedItems =>
       state.items.where((item) => item.selected).map((item) => item.photo);
 
-  Future<void> _loadPhotos(_StateEmitter emit) async {
+  Future<PhotoGridState> _onReady() async {
     _allGridItems = await compute(
       _loadPhotosSync,
       await getPhotoPaths().toList(),
     );
-    emit(state.copyWith(items: _allGridItems));
+    return state.copyWith(items: _allGridItems);
   }
 
   static List<PhotoGridItem> _loadPhotosSync(Iterable<String> paths) {
@@ -60,53 +73,50 @@ class PhotoGridBloc extends Bloc<PhotoGridEvent, PhotoGridState> {
       );
   }
 
-  void _onFilterChanged(Game? selection, _StateEmitter emit) {
+  PhotoGridState? _onFilterSelectionChanged(Game? selection) {
     if (selection != _currentFilter) {
       _currentFilter = selection;
-      emit(
-        state.copyWith(
-          items: selection is Game
-              ? state.items
-                  .where((item) => item.photo.game == selection)
-                  .toList(growable: false)
-              : state.items,
-        ),
+      return state.copyWith(
+        items: selection is Game
+            ? state.items
+                .where((item) => item.photo.game == selection)
+                .toList(growable: false)
+            : state.items,
       );
+    } else {
+      return null;
     }
   }
 
-  void _onPhotoSelectionStateChanged(int selectedIndex, _StateEmitter emit) {
-    emit(
-      state.copyWith(
-        items: List.generate(
-          state.items.length,
-          (index) {
-            final item = state.items[index];
-            return selectedIndex == index
-                ? item.copyWith(selected: !item.selected)
-                : item;
-          },
-        ),
+  PhotoGridState _onPhotoSelectionStateChanged(int selectedIndex) {
+    return state.copyWith(
+      items: List.generate(
+        state.items.length,
+        (index) {
+          final item = state.items[index];
+          return selectedIndex == index
+              ? item.copyWith(selected: !item.selected)
+              : item;
+        },
       ),
     );
   }
 
-  Future<void> _saveSelectedPhotos() async {
+  Future<void> _onSaveButtonClicked() async {
     await savePhotos(_selectedItems); // TODO: handle result
   }
 
-  void _showDeletionConfirmationDialog(_StateEmitter emit) {
-    emit(state.copyWith(deletionConfirmationDialogShown: true));
+  PhotoGridState _onDeleteButtonClicked() {
+    return state.copyWith(deletionConfirmationDialogShown: true);
   }
 
-  Future<void> _onConfirmationDialogDismissed(
+  Future<PhotoGridState> _onDeletionConfirmationDialogDismissed(
     bool result,
-    _StateEmitter emit,
   ) async {
-    emit(state.copyWith(deletionConfirmationDialogShown: false));
     if (result) {
       await _deleteSelectedPhotos();
     }
+    return state.copyWith(deletionConfirmationDialogShown: false);
   }
 
   Future<void> _deleteSelectedPhotos() async {

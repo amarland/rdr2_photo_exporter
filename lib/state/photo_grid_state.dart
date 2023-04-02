@@ -1,12 +1,12 @@
 import '../models/photo_grid_item.dart';
 
 class PhotoGridState {
-  const PhotoGridState({
+  const PhotoGridState._({
     required this.items,
     required this.deletionConfirmationDialogShown,
   });
 
-  static final PhotoGridState initial = PhotoGridState(
+  static final PhotoGridState initial = PhotoGridState._(
     items: List.empty(),
     deletionConfirmationDialogShown: false,
   );
@@ -21,7 +21,7 @@ class PhotoGridState {
     List<PhotoGridItem>? items,
     bool? deletionConfirmationDialogShown,
   }) {
-    return PhotoGridState(
+    return PhotoGridState._(
       items: items ?? this.items,
       deletionConfirmationDialogShown: deletionConfirmationDialogShown ??
           this.deletionConfirmationDialogShown,
