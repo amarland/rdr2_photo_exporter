@@ -3,7 +3,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 
 import 'ui/app.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const App());
   final platform = BitsdojoWindowWindows();

@@ -14,10 +14,10 @@ dependencies:
   filepicker_windows:
     git:
       url: https://github.com/amarland/filepicker_windows.git
-      ref: initial_directory_support
+      ref: fad13ee214437385a1ebc884123c215af29f2cca
   fluent_ui: ^4.4.1
   flutter_bloc: ^8.1.2
-  intl: ^0.17.0
+  intl: ^0.18.0
   path: ^1.8.2
   path_provider_windows: ^2.1.5
   win32: ^3.1.3
