@@ -28,7 +28,7 @@ class CommandBarComboBox<T> extends CommandBarItem {
   @override
   Widget build(BuildContext context, CommandBarItemDisplayMode displayMode) {
     final textAndIconColor =
-        enabled ? null : FluentTheme.of(context).disabledColor;
+        enabled ? null : FluentTheme.of(context).inactiveColor;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

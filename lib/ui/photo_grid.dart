@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/game.dart';
 import '../models/photo_grid_item.dart';
 import '../state/photo_grid_bloc.dart';
-import '../state/photo_grid_event.dart';
 import '../state/photo_grid_state.dart';
 import 'command_bar_combo_box.dart';
 import 'photo_tile.dart';
@@ -17,10 +16,10 @@ class PhotoGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => PhotoGridBloc()..add(const Ready()),
-      child: BlocConsumer<PhotoGridBloc, PhotoGridState>(
+      create: (_) => PhotoGridCubit()..onReady(),
+      child: BlocConsumer<PhotoGridCubit, PhotoGridState>(
         builder: (context, state) {
-          final bloc = context.read<PhotoGridBloc>();
+          final cubit = context.read<PhotoGridCubit>();
           return ScaffoldPage(
             header: CommandBarCard(
               child: CommandBar(
@@ -43,10 +42,8 @@ class PhotoGrid extends StatelessWidget {
                       ),
                     ],
                     onChanged: (selection) {
-                      bloc.add(
-                        FilterSelectionChanged(
-                          selection is Game ? selection : null,
-                        ),
+                      cubit.onFilterSelectionChanged(
+                        selection is Game ? selection : null,
                       );
                     },
                     enabled: state.filteringEnabled,
@@ -55,14 +52,14 @@ class PhotoGrid extends StatelessWidget {
                     icon: const Icon(FluentIcons.save),
                     label: const Text('Extract'),
                     onPressed: state.actionButtonsEnabled
-                        ? () => bloc.add(const SaveButtonClicked())
+                        ? () => cubit.onSaveButtonClicked()
                         : null,
                   ),
                   CommandBarButton(
                     icon: const Icon(FluentIcons.delete),
                     label: const Text('Delete'),
                     onPressed: state.actionButtonsEnabled
-                        ? () => bloc.add(const DeleteButtonClicked())
+                        ? () => cubit.onDeleteButtonClicked()
                         : null,
                   ),
                 ],
@@ -70,9 +67,17 @@ class PhotoGrid extends StatelessWidget {
               ),
             ),
             padding: EdgeInsets.zero,
-            content: state.items.isNotEmpty
-                ? _buildGridView(state.items)
-                : const Center(child: ProgressRing()),
+            content: switch (state.items) {
+              null => const Center(child: ProgressRing()),
+              List<PhotoGridItem> items when items.isNotEmpty =>
+                _buildGridView(items),
+              _ => Center(
+                  child: Text(
+                    'No photos were found. 😟',
+                    style: FluentTheme.of(context).typography.bodyLarge,
+                  ),
+                ),
+            },
           );
         },
         listener: (context, state) {
@@ -99,7 +104,9 @@ class PhotoGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         return PhotoTile(
           item: items[index],
-          onTap: () => context.read<PhotoGridBloc>().add(PhotoClicked(index)),
+          onTap: () {
+            context.read<PhotoGridCubit>().onPhotoSelectionStateChanged(index);
+          },
         );
       },
       itemCount: items.length,
@@ -149,8 +156,9 @@ class PhotoGrid extends StatelessWidget {
       positiveButtonText: 'Delete',
       negativeButtonText: 'Cancel',
       onDialogDismissed: (result) {
-        final bloc = context.read<PhotoGridBloc>();
-        return bloc.add(DeletionConfirmationDialogDismissed(result));
+        context
+            .read<PhotoGridCubit>()
+            .onDeletionConfirmationDialogDismissed(result);
       },
     );
   }

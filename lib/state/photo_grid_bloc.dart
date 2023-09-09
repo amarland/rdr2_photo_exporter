@@ -5,51 +5,73 @@ import 'package:rdr2_photo_exporter/models/photo.dart';
 import '../filesystem/filesystem.dart';
 import '../models/game.dart';
 import '../models/photo_grid_item.dart';
-import '../state/photo_grid_event.dart';
 import '../state/photo_grid_state.dart';
 
-// TODO: replace with Cubit?
-class PhotoGridBloc extends Bloc<PhotoGridEvent, PhotoGridState> {
-  PhotoGridBloc() : super(PhotoGridState.initial) {
-    on<Ready>((_, emit) async {
-      emit(await _onReady());
-    });
-    on<FilterSelectionChanged>(
-      (event, emit) {
-        final newState = _onFilterSelectionChanged(event.selection);
-        if (newState != null) {
-          emit(newState);
-        }
-      },
-    );
-    on<PhotoClicked>((event, emit) {
-      emit(_onPhotoSelectionStateChanged(event.index));
-    });
-    on<SaveButtonClicked>((_, __) async {
-      await _onSaveButtonClicked();
-    });
-    on<DeleteButtonClicked>((_, emit) {
-      emit(_onDeleteButtonClicked());
-    });
-    on<DeletionConfirmationDialogDismissed>(
-      (event, emit) async {
-        emit(await _onDeletionConfirmationDialogDismissed(event.result));
-      },
-    );
-  }
+class PhotoGridCubit extends Cubit<PhotoGridState> {
+  PhotoGridCubit() : super(PhotoGridState.initial);
 
   Game? _currentFilter;
-  List<PhotoGridItem> _allGridItems = PhotoGridState.initial.items;
+  List<PhotoGridItem> _allGridItems = List.empty();
 
   Iterable<Photo> get _selectedItems =>
-      state.items.where((item) => item.selected).map((item) => item.photo);
+      state.items?.where((item) => item.selected).map((item) => item.photo) ??
+      List.empty();
 
-  Future<PhotoGridState> _onReady() async {
+  Future<void> onReady() async {
     _allGridItems = await compute(
       _loadPhotosSync,
       await getPhotoPaths().toList(),
     );
-    return state.copyWith(items: _allGridItems);
+    emit(state.copyWith(items: () => _allGridItems));
+  }
+
+  void onFilterSelectionChanged(Game? selection) {
+    if (selection == _currentFilter) return;
+    final items = _requireGridItems();
+    _currentFilter = selection;
+    emit(
+      state.copyWith(
+        items: () {
+          return selection is Game
+              ? items
+                  .where((item) => item.photo.game == selection)
+                  .toList(growable: false)
+              : items;
+        },
+      ),
+    );
+  }
+
+  void onPhotoSelectionStateChanged(int selectedIndex) {
+    final items = _requireGridItems();
+    emit(
+      state.copyWith(
+        items: () {
+          return List.generate(
+            items.length,
+            (index) {
+              final item = items[index];
+              return selectedIndex == index
+                  ? item.copyWith(selected: !item.selected)
+                  : item;
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> onSaveButtonClicked() async {
+    await savePhotos(_selectedItems); // TODO: handle result
+  }
+
+  void onDeleteButtonClicked() {
+    emit(state.copyWith(deletionConfirmationDialogShown: true));
+  }
+
+  Future<void> onDeletionConfirmationDialogDismissed(bool result) async {
+    if (result) await _deleteSelectedPhotos();
+    emit(state.copyWith(deletionConfirmationDialogShown: false));
   }
 
   static List<PhotoGridItem> _loadPhotosSync(Iterable<String> paths) {
@@ -73,50 +95,12 @@ class PhotoGridBloc extends Bloc<PhotoGridEvent, PhotoGridState> {
       );
   }
 
-  PhotoGridState? _onFilterSelectionChanged(Game? selection) {
-    if (selection != _currentFilter) {
-      _currentFilter = selection;
-      return state.copyWith(
-        items: selection is Game
-            ? state.items
-                .where((item) => item.photo.game == selection)
-                .toList(growable: false)
-            : state.items,
-      );
-    } else {
-      return null;
+  List<PhotoGridItem> _requireGridItems() {
+    final items = state.items;
+    if (items == null || items.isEmpty) {
+      throw StateError('`state.items` is null or empty');
     }
-  }
-
-  PhotoGridState _onPhotoSelectionStateChanged(int selectedIndex) {
-    return state.copyWith(
-      items: List.generate(
-        state.items.length,
-        (index) {
-          final item = state.items[index];
-          return selectedIndex == index
-              ? item.copyWith(selected: !item.selected)
-              : item;
-        },
-      ),
-    );
-  }
-
-  Future<void> _onSaveButtonClicked() async {
-    await savePhotos(_selectedItems); // TODO: handle result
-  }
-
-  PhotoGridState _onDeleteButtonClicked() {
-    return state.copyWith(deletionConfirmationDialogShown: true);
-  }
-
-  Future<PhotoGridState> _onDeletionConfirmationDialogDismissed(
-    bool result,
-  ) async {
-    if (result) {
-      await _deleteSelectedPhotos();
-    }
-    return state.copyWith(deletionConfirmationDialogShown: false);
+    return items;
   }
 
   Future<void> _deleteSelectedPhotos() async {
