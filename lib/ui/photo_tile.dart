@@ -5,12 +5,12 @@ import '../models/photo_grid_item.dart';
 
 class PhotoTile extends StatelessWidget {
   const PhotoTile({
-    Key? key,
+    super.key,
     required this.item,
     required this.onTap,
-  }) : super(key: key);
+  });
 
-  static final _dateFormat = DateFormat.yMd()/*.add_jm()*/;
+  static final _dateFormat = DateFormat.yMd() /*.add_jm()*/;
 
   final PhotoGridItem item;
   final VoidCallback onTap;
@@ -82,7 +82,7 @@ class PhotoTile extends StatelessWidget {
         padding: const EdgeInsets.only(
           left: 8.0, // compensate for the internal padding of the checkbox
           top: 4.0,
-          right: 4.0,
+          right: 8.0,
           bottom: 4.0,
         ),
         child: ConstrainedBox(

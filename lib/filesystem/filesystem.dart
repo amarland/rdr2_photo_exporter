@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-
 // ignore: unnecessary_import
 import 'dart:typed_data';
 
@@ -18,11 +17,15 @@ Stream<String> getPhotoPaths() async* {
     (await (PathProviderWindows().getApplicationDocumentsPath()))!,
     'Rockstar Games',
   );
-  final directories = [
-    Directory(path.join(rootPath, 'Red Dead Redemption 2', 'Profiles')),
-    Directory(path.join(rootPath, 'GTA V', 'Profiles')),
+  final gameDirectories = [
+    'Red Dead Redemption 2',
+    'GTA V',
+    'GTAV Enhanced',
   ];
-  for (final profilesDirectory in directories) {
+  final profilesDirectories = gameDirectories.map(
+    (segment) => Directory(path.join(rootPath, segment, 'Profiles')),
+  );
+  for (final profilesDirectory in profilesDirectories) {
     if (await profilesDirectory.exists()) {
       final profileDirectories =
           profilesDirectory.list().whereType<Directory>();
